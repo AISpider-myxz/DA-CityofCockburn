@@ -78,11 +78,18 @@ class CockburnSpider(scrapy.Spider):
         while True:
             from_data = CockburnSpider.deal_form_data2(resp,num=page_num)
             next_resp = session.post(url=self.result_url,headers=self.headers,data=from_data,cookies=self.cookie)
+            if judge == True:
+                for item in self.get_details(resp):
+                    yield item
+            else:
+                break
+
             for item in self.get_details(next_resp):
                 if item ==None:break
                 yield item
             resp = next_resp
             page_num+=1
+
 
     def get_past_data(self,start_date,end_date):
         session = Session()
