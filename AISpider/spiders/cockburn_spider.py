@@ -298,5 +298,6 @@ class CockburnSpider(scrapy.Spider):
             item['document']=document
         except:
             pass
-
+        item['metadata'] ={}
+        del item['metadata']
         yield item
