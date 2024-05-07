@@ -37,8 +37,20 @@ class CockburnSpider(scrapy.Spider):
             self.days = date_from
     def start_requests(self):
         if self.category == 'current':
-            for item in self.get_current_data():
-                yield item
+            all_month = get_all_month(self.days, "%d/%m/%Y")
+            for index, y_date in enumerate(all_month):
+                if y_date == all_month[-1]:
+                    break
+                start_time = y_date
+                end_time = all_month[index + 1]
+                judge_result = self.judge_date(start_time)
+                if datetime.strptime(self.days, '%d/%m/%Y').timestamp() > datetime.strptime(start_time, '%d/%m/%Y').timestamp() and judge_result==True:continue
+                if self.days.split('/')[1] == start_time.split('/')[1] and self.days.split('/')[2] == start_time.split('/')[2]:
+                    start_time = self.days
+                print(start_time + "-----" + end_time)
+                for item in self.get_current_data(start_date=start_time,end_date=end_time):
+                    yield item
+           
         elif self.category == 'past':
             all_month = get_all_month(self.days, "%d/%m/%Y")
             for index, y_date in enumerate(all_month):
@@ -61,17 +73,21 @@ class CockburnSpider(scrapy.Spider):
         else:
             return False
 
-    def get_current_data(self):
+    def get_current_data(self,start_date,end_date):
         session = Session()
         proxy = {'https': 'http://127.0.0.1:8888'}
         resp = session.get(url=self.start_urls[0],headers=self.headers,)
         cookies = session.cookies.get_dict()
         self.cookie = cookies
-        from_data = CockburnSpider.deal_form_data(resp)
+        from_data = CockburnSpider.deal_form_data(resp,start_date,end_date)
         session.post(url=self.start_urls[0],headers=self.headers,data=from_data,)
         resp = session.get(url=self.result_url,headers=self.headers,)
-        for item in self.get_details(resp):
-            yield item
+        judge = self.judge(resp)
+        if judge == True:
+            for item in self.get_details(resp):
+                yield item
+        else:
+            return None
         
         page_num = 2
         #获取下一页
@@ -162,7 +178,7 @@ class CockburnSpider(scrapy.Spider):
             yield Request(url,callback=self.parse,body=json.dumps(from_data))
 
     @staticmethod
-    def deal_form_data(response):
+    def deal_form_data(response,start_date,end_date):
         soup = BeautifulSoup(response.text, "html.parser")
         __VIEWSTATE = soup.select_one("#__VIEWSTATE").get('value')
         __EVENTVALIDATION = soup.select_one("#__EVENTVALIDATION").get('value')
@@ -176,8 +192,8 @@ class CockburnSpider(scrapy.Spider):
             '__SCROLLPOSITIONY': 1212,
             '__EVENTVALIDATION': __EVENTVALIDATION,
             'ctl00$Content$txtApplicationID$txtText': '',
-            'ctl00$Content$txtDateFrom$txtText': '01/01/2012',
-            'ctl00$Content$txtDateTo$txtText': '10/04/2024',
+            'ctl00$Content$txtDateFrom$txtText': start_date,
+            'ctl00$Content$txtDateTo$txtText': end_date,
             'ctl00$Content$txtDescription$txtText': '',
             'ctl00$Content$ddlApplicationType$elbList': 'all',
             'ctl00$Content$ddlStatus$elbList': 'C',
