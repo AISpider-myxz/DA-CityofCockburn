@@ -94,6 +94,7 @@ class CockburnSpider(scrapy.Spider):
         while True:
             from_data = CockburnSpider.deal_form_data2(resp,num=page_num)
             next_resp = session.post(url=self.result_url,headers=self.headers,data=from_data,cookies=self.cookie)
+            judge = self.judge(resp)
             if judge == True:
                 for item in self.get_details(resp):
                     yield item
